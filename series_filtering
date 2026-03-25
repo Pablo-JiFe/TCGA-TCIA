@@ -20,13 +20,34 @@ metadata_protocols <- metadata[, c("Patient ID", "Protocol Name", "Series Descri
 
 metadata_protocols$`Series Description` %>% 
   str_subset(regex("pjn|mip|bind", ignore_case = TRUE)) %>% 
-  unique() 
+  str_subset(regex("^(?!.*sub).*$", ignore_case = TRUE)) %>% 
+  unique() %>% 
+  cat(sep = "\n")
 
-# Include )-( to represent the observations with the format (a/b/c)-(a/d/c)
+# Include the substraction methods: )-( to represent the observations with the format (a/b/c)-(a/d/c)
 
 metadata_protocols$`Series Description` %>% 
-  str_subset(regex("\\)-\\(", ignore_case = TRUE)) %>% 
-  unique() 
+  str_subset(regex("\\)-\\(", ignore_case = TRUE)) %>%
+  unique() %>% 
+  cat(sep = "\n")
+
+# Other substraction methods without MIP post processing
+
+metadata_protocols$`Series Description` %>% 
+  str_subset(regex("sub", ignore_case = TRUE)) %>%
+  str_subset(regex("^(?!.*mip).*$", ignore_case = TRUE)) %>% 
+  str_subset(regex("^(?!.*cad).*$", ignore_case = TRUE)) %>% 
+  unique() %>% 
+  cat(sep = "\n")
+
+metadata_protocols$`Series Description` %>% 
+  str_subset(regex("sub", ignore_case = TRUE)) %>%
+  str_subset(regex("mip|cad", ignore_case = TRUE)) %>% 
+  unique() %>% 
+  cat(sep = "\n")
+
+
+
 
 # Include de localizing images
 
@@ -35,7 +56,7 @@ metadata_protocols$`Series Description` %>%
   unique()
 
 
-  # T2 filtering into fat sat and not fat sat -------------------------------
+# T2 filtering into fat sat and not fat sat -------------------------------
 
 
 # All the unique elements containing t2
