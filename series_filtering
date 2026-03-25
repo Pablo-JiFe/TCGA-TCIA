@@ -1,0 +1,67 @@
+library(tidyverse)
+
+# Load data
+
+metadata <- readxl::read_xlsx("Datos/TCIA_TCGA-BRCA_09-16-2015-nbia-digest-1(1).xlsx")
+
+
+# WITHOUT eliminating duplicates, obtain an object that contains only the patient ID
+# the name of the protocol, the series description and the series number
+
+metadata_protocols <- metadata[, c("Patient ID", "Protocol Name", "Series Description", "Series Number")] %>% 
+  group_by(`Patient ID`) %>% 
+  arrange(`Series Number`, .by_group = TRUE) %>% 
+  as.data.frame() 
+
+# Obtain unique terms corressponding with a desired string
+
+# Post processing terms
+# Include terms that describe post processing methods 
+
+metadata_protocols$`Series Description` %>% 
+  str_subset(regex("pjn|mip|bind", ignore_case = TRUE)) %>% 
+  unique() 
+
+# Include )-( to represent the observations with the format (a/b/c)-(a/d/c)
+
+metadata_protocols$`Series Description` %>% 
+  str_subset(regex("\\)-\\(", ignore_case = TRUE)) %>% 
+  unique() 
+
+# Include de localizing images
+
+metadata_protocols$`Series Description` %>% 
+  str_subset(regex("loc", ignore_case = TRUE)) %>% 
+  unique()
+
+
+  # T2 filtering into fat sat and not fat sat -------------------------------
+
+
+# All the unique elements containing t2
+
+metadata_protocols$`Series Description` %>% 
+  str_subset(regex("t2", ignore_case = TRUE)) %>% 
+  unique() %>% 
+  length() # Length is of 26
+
+# T2 sat/supressed only 
+
+metadata_protocols$`Series Description` %>% 
+  str_subset(regex("t2", ignore_case = TRUE)) %>% # All T2
+  str_subset(regex("sat|fs|f/s|TIRM|SPAIR|ir", ignore_case = TRUE)) %>% # Include those that are either explicit fat saturated or indirecht techiques
+  str_subset(regex("^(?!.*NON FS).*$", ignore_case = TRUE)) %>% # Ignore those explicitly stated as Non fat saturated
+  str_subset(regex("^(?!.*T SAG FSE).*$", ignore_case = FALSE)) %>% # Ignore those that oinclude FSE as a whole since that is a technique that is not fat saturated
+  str_subset(regex("^(?!.*T sag fse).*$", ignore_case = FALSE)) %>% # Same as before
+  str_subset(regex("^(?!.*T2 fse ax bilat).*$", ignore_case = FALSE)) %>% # Same as before
+  unique() # The length of this object is 12
+
+metadata_protocols$`Series Description` %>% 
+  str_subset(regex("t2|NON FS", ignore_case = TRUE)) %>%  # Obtain t2
+  str_subset(regex("^(?!.*sat).*$", ignore_case = TRUE)) %>%  # This and the next 4 lines ignore either explicit fat saturated descriptions or a technique of fat saturation
+  str_subset(regex("^(?!.*f/s).*$", ignore_case = TRUE)) %>% 
+  str_subset(regex("^(?!.*TIRM).*$", ignore_case = TRUE)) %>%  
+  str_subset(regex("^(?!.*SPAIR).*$", ignore_case = TRUE)) %>%
+  str_subset(regex("^(?!.*\\bir\\b).*$", ignore_case = TRUE)) %>% # This one is to ignore ir method of fat saturation
+  str_subset(regex("^(?!.*(?<!NON )\\bfs\\b)(?!.*f/s)(?!.*sat)(?!.*TIRM)(?!.*SPAIR).*$", ignore_case = TRUE)) %>% # This is so taht it does not eliminate the NON FS object
+  unique() # The length of this object is 14 which summed with previous comletes the 26 uniques of t2
