@@ -12,6 +12,7 @@ metadata_protocols <- metadata[, c("Patient ID", "Protocol Name", "Series Descri
   group_by(`Patient ID`) %>% 
   arrange(`Series Number`, .by_group = TRUE) %>% 
   as.data.frame() 
+View(metadata_protocols)
 
 # Obtain unique terms corressponding with a desired string
 
@@ -19,7 +20,7 @@ metadata_protocols <- metadata[, c("Patient ID", "Protocol Name", "Series Descri
 # Include terms that describe post processing methods 
 
 metadata_protocols$`Series Description` %>% 
-  str_subset(regex("pjn|mip|bind", ignore_case = TRUE)) %>% 
+  str_subset(regex("pjn|mip|bind|cad|Processed", ignore_case = TRUE)) %>% 
   str_subset(regex("^(?!.*sub).*$", ignore_case = TRUE)) %>% 
   unique() %>% 
   cat(sep = "\n")
@@ -86,3 +87,64 @@ metadata_protocols$`Series Description` %>%
   str_subset(regex("^(?!.*\\bir\\b).*$", ignore_case = TRUE)) %>% # This one is to ignore ir method of fat saturation
   str_subset(regex("^(?!.*(?<!NON )\\bfs\\b)(?!.*f/s)(?!.*sat)(?!.*TIRM)(?!.*SPAIR).*$", ignore_case = TRUE)) %>% # This is so taht it does not eliminate the NON FS object
   unique() # The length of this object is 14 which summed with previous comletes the 26 uniques of t2
+
+# Undetermined T Weight 3D
+
+metadata_protocols$`Series Description` %>% 
+  str_subset(regex("vista|space|cube", ignore_case = TRUE)) %>% # T2 VISTA
+  str_subset(regex("^(?!.*CAD).*$")) %>% 
+  unique() %>% 
+  cat(sep = "\n")
+
+
+# T1 filtering into pre and post contrast -------------------------------
+
+
+# All the unique elements containing t1
+
+metadata_protocols$`Series Description` %>% 
+  str_subset(regex("t1", ignore_case = TRUE)) %>% 
+  unique() #%>%
+length() # Length is of 28
+
+
+
+
+# T1 pre contrast fat saturated
+
+t1_fs <- metadata_protocols$`Series Description` %>% 
+  str_subset(regex("t1", ignore_case = TRUE)) %>% # All T1
+  str_subset(regex("fat sat|fs ", ignore_case = TRUE)) %>% # Include those registered as fat saturated
+  str_subset(regex("^(?!.*post).*$", ignore_case = TRUE)) %>% # Eliminate those registered as post contrast
+  str_subset(regex("^(?!.*non fat).*$", ignore_case = TRUE)) %>% # eliminate those that explicitly state non fat
+  unique() # Length of 3
+t1_fs %>% 
+  cat(sep = "\n")
+
+# T1 pre contrast not fat saturated
+
+metadata_protocols$`Series Description` %>% 
+  str_subset(regex("t1", ignore_case = TRUE)) %>% # All T1
+  str_subset(regex("^(?!.*post).*$", ignore_case = TRUE)) %>% # Include those that are not post contrast
+  str_subset(regex(paste0("^(?!.*", t1_fs[1], ").*$"), ignore_case = TRUE)) %>% # This and the next line are to eliminate the terms already defiened as fat sat
+  str_subset(regex(paste0("^(?!.*", t1_fs[2], ").*$"), ignore_case = TRUE)) %>% # done this way to not filter out accidentaly the "non fat" objects
+  str_subset(regex(paste0("^(?!.*", t1_fs[3], ").*$"), ignore_case = TRUE)) %>%
+  unique() %>%  # Length of 18
+  cat(sep = "\n")
+
+
+
+
+# T1 post contrast only 
+
+metadata_protocols$`Series Description` %>% 
+  str_subset(regex("t1", ignore_case = TRUE)) %>% # All T1
+  str_subset(regex("post", ignore_case = TRUE)) %>% # Include those post contrast
+  unique() %>%  # The length of this object is 7
+  cat(sep = "\n")
+
+
+
+
+
+
