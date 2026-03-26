@@ -114,10 +114,10 @@ length() # Length is of 28
 
 t1_fs <- metadata_protocols$`Series Description` %>% 
   str_subset(regex("t1", ignore_case = TRUE)) %>% # All T1
-  str_subset(regex("fat sat|fs ", ignore_case = TRUE)) %>% # Include those registered as fat saturated
+  str_subset(regex("fat sat|fs |spair", ignore_case = TRUE)) %>% # Include those registered as fat saturated
   str_subset(regex("^(?!.*post).*$", ignore_case = TRUE)) %>% # Eliminate those registered as post contrast
   str_subset(regex("^(?!.*non fat).*$", ignore_case = TRUE)) %>% # eliminate those that explicitly state non fat
-  unique() # Length of 3
+  unique() # Length of 4
 t1_fs %>% 
   cat(sep = "\n")
 
@@ -129,7 +129,8 @@ metadata_protocols$`Series Description` %>%
   str_subset(regex(paste0("^(?!.*", t1_fs[1], ").*$"), ignore_case = TRUE)) %>% # This and the next line are to eliminate the terms already defiened as fat sat
   str_subset(regex(paste0("^(?!.*", t1_fs[2], ").*$"), ignore_case = TRUE)) %>% # done this way to not filter out accidentaly the "non fat" objects
   str_subset(regex(paste0("^(?!.*", t1_fs[3], ").*$"), ignore_case = TRUE)) %>%
-  unique() %>%  # Length of 18
+  str_subset(regex(paste0("^(?!.*", t1_fs[4], ").*$"), ignore_case = TRUE)) %>%
+  unique() %>% # Length of 17
   cat(sep = "\n")
 
 
