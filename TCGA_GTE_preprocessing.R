@@ -109,4 +109,13 @@ counts_df <- read_parquet(
 )
 
 
+saveRDS(counts_fpkm, "data/counts_fpkm.RDS")
+saveRDS(counts_control, "data/counts_control.RDS")
+saveRDS(counts_disease, "data/counts_disease.RDS")
 
+saveRDS(counts_df, "data/counts_df.RDS")
+saveRDS(metadata_breast_woman, "data/metadata_breast_woman.RDS")
+
+saveRDS(genes_tcga, "data/genes_tcga.RDS")
+
+rm(list = ls())

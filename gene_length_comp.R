@@ -1,4 +1,12 @@
-counts_fpkm <- readRDS("D:/tcga/counts_fpkm_brca")
+
+
+
+counts_fpkm <- readRDS("data/counts_fpkm.RDS")
+counts_control <- readRDS("data/counts_control.RDS")
+counts_disease <- readRDS("data/counts_disease.RDS")
+counts_df <- readRDS("data/counts_df.RDS")
+metadata_breast_woman <- readRDS("data/metadata_breast_woman.RDS")
+genes_tcga <- readRDS("data/genes_tcga.RDS")
 
 
 genes_tcga <- counts_fpkm %>%
@@ -8,7 +16,7 @@ genes_tcga <- counts_fpkm %>%
   filter(!(gene_type == ""))
 
 
-
+genes_tcga$gene_id <- gsub("\\..*", "" , genes_tcga$gene_id)
 
 
 
@@ -65,8 +73,9 @@ counts_remain$gene_name[counts_remain$var == max(counts_remain$var)]
 
 # Gene names of highest variance genes
 
-counts_remain %>% 
+hig_var_gen <- counts_remain %>% 
   filter(var >= quantile(counts_remain$var, 0.9995)) %>% 
+  arrange(desc(var)) %>% 
   select(gene_name)
 
 
@@ -92,9 +101,10 @@ ggplot(counts_cont_filt, aes(x = var + 1)) +
   geom_density() +  
   scale_x_log10()
 
-counts_cont_filt %>% 
+hig_var_gen_cont <- counts_cont_filt %>% 
   tidyr::drop_na(var) %>% 
   filter(var >= quantile(counts_cont_filt$var, 0.9995, na.rm = TRUE)) %>% 
+  arrange(desc(var)) %>% 
   select(gene_name)
 
 
@@ -108,9 +118,8 @@ ggplot(counts_dis_filt, aes(x = var + 1)) +
   geom_density() +  
   scale_x_log10()
 
-x_dis <- counts_dis_filt %>% 
-  tidyr::drop_na(var) 
-x_dis <- x_dis %>%  
-  filter(var >= quantile(counts_dis_filt$var, 0.9995, na.rm = TRUE))
-
-x_dis$gene_name
+hig_var_gen_dis <- counts_dis_filt %>% 
+  tidyr::drop_na(var) %>%  
+  filter(var >= quantile(counts_dis_filt$var, 0.9995, na.rm = TRUE)) %>% 
+  arrange(desc(var)) %>% 
+  select(gene_name)
