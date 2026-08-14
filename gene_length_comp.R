@@ -1,5 +1,5 @@
-
-
+library(dplyr)
+library(ggplot2)
 
 counts_fpkm <- readRDS("data/counts_fpkm.RDS")
 counts_control <- readRDS("data/counts_control.RDS")
@@ -123,3 +123,108 @@ hig_var_gen_dis <- counts_dis_filt %>%
   filter(var >= quantile(counts_dis_filt$var, 0.9995, na.rm = TRUE)) %>% 
   arrange(desc(var)) %>% 
   select(gene_name)
+
+library(patchwork)
+
+
+transposed_unique <- counts_dis_filt %>%
+  tibble::rownames_to_column("del") %>% 
+  select(- c(del,
+             gene_id)) %>% 
+  group_by(gene_name) %>% 
+  slice_max(n = 1, order_by = var, with_ties = FALSE) %>% 
+  ungroup() %>% 
+  select(-var) %>% 
+  tibble::column_to_rownames("gene_name") %>% 
+  t() %>% 
+  as.data.frame() 
+
+transposed_unique_cont <- counts_cont_filt %>%
+  tibble::rownames_to_column("del") %>% 
+  select(- c(del,
+             gene_id)) %>% 
+  group_by(gene_name) %>% 
+  slice_max(n = 1, order_by = var, with_ties = FALSE) %>% 
+  ungroup() %>% 
+  select(-var) %>% 
+  tibble::column_to_rownames("gene_name") %>% 
+  t() %>% 
+  as.data.frame() 
+
+
+genes_to_analyze <- unique(rbind(hig_var_gen, hig_var_gen_dis, hig_var_gen_cont))$gene_name
+
+
+for (i in genes_to_analyze) {
+  
+  
+  plot <- transposed_unique %>% ggplot(aes(x = .data[[i]] + 1)) +
+    geom_boxplot() +  
+    scale_x_log10() +
+    labs(title = "Log10 scaled cancer samples")
+  
+  plot2 <- transposed_unique %>% ggplot(aes(x = .data[[i]])) +
+    geom_boxplot() +
+    labs(title = "Not scaled cancer samples")
+  
+  plot3 <- transposed_unique_cont %>% ggplot(aes(x = .data[[i]] + 1)) +
+    geom_boxplot() +  
+    scale_x_log10() +
+    labs(title = "Log10 scaled control samples")
+  
+  plot4 <- transposed_unique_cont %>% ggplot(aes(x = .data[[i]])) +
+    geom_boxplot() +
+    labs(title = "Not scaled control samples")
+  
+  
+  join_dis_plot <- plot/plot2
+  
+  join_cont_plot <- plot3/plot4
+  
+  cat("#############################\n", i, "\n------------------------\n")
+  
+  combined_plot <- join_dis_plot | join_cont_plot
+  
+  top_dis_counts <- head(sort(transposed_unique[[i]], decreasing = TRUE), n = 20)
+  
+  plot_cuantity_dis <- 
+    top_dis_counts %>% 
+    as.data.frame() %>% 
+    tibble::rownames_to_column("index") %>% 
+    dplyr::mutate(index = as.numeric(index)) %>%
+    ggplot(aes(x = index, y = .)) + 
+    geom_point() + 
+    scale_x_continuous(breaks = 1:20) +
+    labs(title = paste("Counts for the highest count disease samples for ", i))
+  
+  top_cont_counts <- head(sort(transposed_unique_cont[[i]], decreasing = TRUE), n = 20)
+  
+  plot_cuantity_cont <- 
+    top_cont_counts %>% 
+    as.data.frame() %>% 
+    tibble::rownames_to_column("index") %>% 
+    dplyr::mutate(index = as.numeric(index)) %>%
+    ggplot(aes(x = index, y = .)) + 
+    geom_point() + 
+    scale_x_continuous(breaks = 1:20) +
+    labs(title = "Counts for the highest count control samples")
+  
+  
+  combined_plot_2 <- plot_cuantity_dis + plot_cuantity_cont
+  
+  print(combined_plot / combined_plot_2)  
+  
+  cat("Cancer samples\n")
+  print(rownames(transposed_unique)[transposed_unique[[i]] == max(transposed_unique[[i]])])
+  print(rownames(transposed_unique)[transposed_unique[[i]] == top_dis_counts[2]])
+  cat("Non cancer samples\n")
+  print(rownames(transposed_unique_cont)[transposed_unique_cont[[i]] == max(transposed_unique_cont[[i]])])
+  print(rownames(transposed_unique_cont)[transposed_unique_cont[[i]] == top_cont_counts[2]])
+  
+  
+  
+}
+
+
+
+
