@@ -2,7 +2,7 @@ library(tidyverse)
 
 # Load data
 
-metadata <- readxl::read_xlsx("TCGA-TCIA/Datos/TCIA_TCGA-BRCA_09-16-2015-nbia-digest-1(1).xlsx")
+metadata <- readxl::read_xlsx("./data/TCIA_TCGA-BRCA_09-16-2015-nbia-digest-1(1).xlsx")
 
 
 # WITHOUT eliminating duplicates, obtain an object that contains only the patient ID
@@ -151,17 +151,16 @@ dce_expl_term <- metadata_protocols$`Series Description` %>%
   str_subset(regex("^(?!.*bind).*$", ignore_case = TRUE)) %>%       # Eliminate bind data
   str_subset(regex("^(?!.*scout).*$", ignore_case = TRUE)) %>%      # Eliminate scout views
   str_subset(regex("^(?!.*pjn).*$", ignore_case = TRUE)) %>%        # Eliminate projection lines
-  str_subset(regex("^(?!.*\\)-\\().*$", ignore_case = TRUE)) %>%
-  str_subset(regex("^(?!.*sub).*$", ignore_case = TRUE)) %>%
-  str_subset(regex("^(?!.*US).*$", ignore_case = TRUE)) %>%
-  str_subset(regex("^(?!.*INPHASE).*$", ignore_case = TRUE)) %>%
+  str_subset(regex("^(?!.*\\)-\\().*$", ignore_case = TRUE)) %>%    # Eliminate substractions
+  str_subset(regex("^(?!.*sub).*$", ignore_case = TRUE)) %>%        # Eliminate substractions
+  str_subset(regex("^(?!.*US).*$", ignore_case = TRUE)) %>%         # Eliminate USG
+  str_subset(regex("^(?!.*INPHASE).*$", ignore_case = TRUE)) %>%    # Eliminate INPHASE (method used to visualize fat)
   str_subset(regex("^(?!.*FAT:).*$")) %>%
   str_subset(regex("^(?!.*MOCO).*$", ignore_case = TRUE)) %>%
   str_subset(regex("^(?!.*interviews).*$", ignore_case = TRUE)) %>%
   str_subset(regex("^(?!.*pilot).*$", ignore_case = TRUE)) %>%
   str_subset(regex("^(?!.*hires).*$", ignore_case = TRUE)) %>%
   str_subset(regex("^(?!.*radial).*$", ignore_case = TRUE)) %>%
-  str_subset(regex("^(?!.*post-contrast).*$", ignore_case = TRUE)) %>%
   str_subset(regex("^(?!.*water).*$", ignore_case = TRUE)) %>%
   str_subset(regex("^(?!.*sag).*$", ignore_case = TRUE)) %>%
 
@@ -237,3 +236,6 @@ metadata_protocols$`Series Description` %>%
   str_subset(regex("^(?!.*cad).*$", ignore_case = TRUE)) %>%
   unique() %>%  # The length of this object is 7
   cat(sep = "\n")
+
+
+write.table(matrix(unique(dce_expl_pt$`Patient ID`), nrow = 1), file = "output_data/dce_patient_names.csv", sep = ",", row.names = FALSE, col.names = FALSE)
