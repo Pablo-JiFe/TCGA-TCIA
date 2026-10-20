@@ -1,80 +1,16 @@
-library(TCGAbiolinks)
-library(SummarizedExperiment)
-library(UCSCXenaTools)
+
 library(dplyr)
 
-tcga_rna <- GDCquery("TCGA-BRCA",
-                     data.category = "Transcriptome Profiling",
-                     access = "open",
-                     experimental.strategy = "RNA-Seq",
-                     workflow.type = "STAR - dplyr::counts"
-)
+tcia_pt <- readxl::read_xlsx("./data/TCIA_TCGA-BRCA_09-16-2015-nbia-digest-1(1).xlsx")
 
-GDCdownload(tcga_rna, method = "api", files.per.chunk = 5)
+counts_raw <- readRDS("data/counts_raw_tcga.RDS")
 
+refined_data <- readRDS("./data/metadata_tcga.RDS") 
 
-tcga_brca_data <- GDCprepare(tcga_rna, directory = "d:/tcga/GDCdata/")
+names <- unique(tcia_pt$`Patient ID`[tcia_pt$`Patient ID` %in% substr(start = 1, stop = 12, colnames(counts_raw))])
 
-
-brca_matrix <- assay(tcga_brca_data, "fpkm_unstrand")
-
-# 1.- Metadata ------------------------------------------------------------
-
-
-
-# 1.1 Generate and Query
-
-data_query <- XenaGenerate(subset = XenaDatasets == "TCGA.BRCA.sampleMap/BRCA_clinicalMatrix") %>% 
-  XenaQuery()
-
-# 1.2 Download 
-
-xe_download <- XenaDownload(data_query, destdir = "D:/tcga/GDCdata/Metadata")
-
-# 1.3 Prepare (Load) the data
-
-brca_clinical <- XenaPrepare(xe_download)
-
-
-# TCIA metadata
-
-metadata_tcia <- readxl::read_xlsx("./data/TCIA_TCGA-BRCA_09-16-2015-nbia-digest-1(1).xlsx")
-
-# Obtain names of patients from tcia
-
-names <- unique(metadata_tcia$`Patient ID`)
-
-# 1.4 Create the Recurrence variables
-
-
-refined_data <- 
-  brca_clinical %>%
-  mutate(
-    SURVIVAL = ifelse(vital_status == "DECEASED", 1, 0),
-    SURVIVAL_MON = ifelse(!is.na(days_to_death) & days_to_death >= 0,
-                          days_to_death, # If they died they have this parameter
-                          days_to_last_followup # Else they have this parameter
-    ) / 30.4166667,
-    RECURRENCE = ifelse(
-      new_neoplasm_event_type %in% c("Locoregional Recurrence", "Distant Metastasis"),
-      1,
-      0
-    ),
-    RECURRENCE_MON = ifelse(
-      RECURRENCE == 1,
-      days_to_new_tumor_event_after_initial_treatment,
-      coalesce(days_to_last_followup, days_to_death)
-    ) / 30.4166667,
-    Patient_ID = substr(start = 1, stop = 12, x = sampleID)
-  ) 
-
-metadata <- 
-  refined_data %>% 
-  filter(substr(start = 14, stop = 15, x = sampleID) == "01",
-         Patient_ID %in% substr(start = 1, stop = 12, x = colnames(brca_matrix))) # Filter only the registry of the sample corresponding to primary
-
-
-dim(metadata)
+metadataa <- refined_data %>% 
+  filter(substr(start = 14, stop = 15, x = sampleID) == "01")
 
 
 metadata %>% 
@@ -106,7 +42,7 @@ refined_data %>%
   filter(n >= 2) %>% 
   arrange(desc(n))
 
-# Keep only patients available in TCIA metadata
+  # Keep only patients available in TCIA metadata
 
 metadata_int <- metadata %>% 
   filter(Patient_ID %in% names)
@@ -252,11 +188,6 @@ metadata_int %>%
   dplyr::count(RECURRENCE) %>% 
   mutate(prop = n / sum(n))
 
-
-
-
-
-patient_dce_names <- scan("output_data/dce_patient_names.csv", sep = ",", what = character())
 
 
 metadata_int_dce <- 
