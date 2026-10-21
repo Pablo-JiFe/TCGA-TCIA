@@ -167,4 +167,5 @@ write_parquet(counts_disease_final[counts_disease_final$gene_name %in% top_5k_ge
 write_parquet(counts_control, "data/counts_control_tcga.parquet")
 write_parquet(counts_disease_final, "data/counts_disease_tcga.parquet")
 write_parquet(counts_mets, "data/counts_mets_tcga.parquet")
+write_parquet(counts_vst_un, "./data/counts_vst_un.parquet")
 

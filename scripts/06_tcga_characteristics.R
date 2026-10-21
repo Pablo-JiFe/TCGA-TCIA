@@ -7,9 +7,13 @@ counts_raw <- readRDS("data/counts_raw_tcga.RDS")
 
 refined_data <- readRDS("./data/metadata_tcga.RDS") 
 
+patient_dce_names <- read_csv("./output_data/dce_patient_names.csv") %>% 
+  as.data.frame() %>% 
+  names()
+
 names <- unique(tcia_pt$`Patient ID`[tcia_pt$`Patient ID` %in% substr(start = 1, stop = 12, colnames(counts_raw))])
 
-metadataa <- refined_data %>% 
+metadata <- refined_data %>% 
   filter(substr(start = 14, stop = 15, x = sampleID) == "01")
 
 

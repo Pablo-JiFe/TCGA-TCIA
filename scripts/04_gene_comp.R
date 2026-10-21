@@ -1,15 +1,14 @@
 library(dplyr)
 library(ggplot2)
+library(arrow)
 
-counts_fpkm <- readRDS("data/counts_fpkm.RDS")
-counts_control <- readRDS("data/counts_control.RDS")
-counts_disease <- readRDS("data/counts_disease.RDS")
-counts_df <- readRDS("data/counts_df.RDS")
-metadata_breast_woman <- readRDS("data/metadata_breast_woman.RDS")
+counts_vst <- read_parquet("data/counts_vst_un.parquet")
+counts_df <- readRDS("data/counts_df_gte.RDS")
+metadata_breast_woman <- readRDS("data/metadata_tcga.RDS")
 genes_tcga <- readRDS("data/genes_tcga.RDS")
 
 
-genes_tcga <- counts_fpkm %>%
+genes_tcga <- genes_tcga %>%
   dplyr::select(gene_id,
                 gene_name,
                 gene_type ) %>%
@@ -40,13 +39,12 @@ remaining_id <- genes_tcga$gene_id[!((genes_tcga$gene_name %in% gene_names_gte) 
 
 # Keep counts in tcga of genes missing in gte
 
-pre_counts_remain <- counts_fpkm[counts_fpkm$gene_name %in% remaining_names, ] 
+pre_counts_remain <- counts_vst[counts_vst$gene_name %in% remaining_names, ] 
 
 # Delete the columns of ensembl and gene type 
 
 counts_remain <- pre_counts_remain %>%
-  as.data.frame()  %>% 
-  select(-c(gene_id, gene_type))
+  as.data.frame()  
 
 # Variancw
 
@@ -129,8 +127,7 @@ library(patchwork)
 
 transposed_unique <- counts_dis_filt %>%
   tibble::rownames_to_column("del") %>% 
-  select(- c(del,
-             gene_id)) %>% 
+  select(- c(del)) %>% 
   group_by(gene_name) %>% 
   slice_max(n = 1, order_by = var, with_ties = FALSE) %>% 
   ungroup() %>% 
@@ -141,8 +138,7 @@ transposed_unique <- counts_dis_filt %>%
 
 transposed_unique_cont <- counts_cont_filt %>%
   tibble::rownames_to_column("del") %>% 
-  select(- c(del,
-             gene_id)) %>% 
+  select(- c(del)) %>% 
   group_by(gene_name) %>% 
   slice_max(n = 1, order_by = var, with_ties = FALSE) %>% 
   ungroup() %>% 
