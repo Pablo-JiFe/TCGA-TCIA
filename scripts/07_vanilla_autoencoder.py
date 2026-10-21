@@ -10,12 +10,12 @@ random.seed(37)
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-counts = pd.read_parquet("./data/counts_disease5k_tcga.parquet")
+counts = pd.read_parquet("../data/counts_disease5k_tcga.parquet")
 counts.rename(counts["gene_name"], inplace=True)
 counts = counts.drop(columns=["gene_name"])
 counts = counts.T
 
-counts_train = counts.sample(n=700)
+counts_train = counts.sample(n=1000, random_state=37)
 counts_test = counts.loc[~ counts.index.isin(counts_train.index)]
 
 
@@ -139,5 +139,5 @@ Z_test_df = pd.DataFrame(
     columns=latent_cols
 )
 
-Z_train_df.to_csv("./output_data/latent_train.csv")
-Z_test_df.to_csv("./output_data/latent_test.csv")
+Z_train_df.to_csv("../output_data/latent_train.csv")
+Z_test_df.to_csv("../output_data/latent_test.csv")

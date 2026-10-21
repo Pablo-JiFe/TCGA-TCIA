@@ -310,7 +310,7 @@ metadata_int_dce %>%
   dplyr::count(SURVIVAL) %>% 
   mutate(prop = n / sum(n))
 
-metadata_int_dce %>% 
+metadata_int_dce %>% ls
   dplyr::group_by(pathologic_stage) %>%
   dplyr::count(RECURRENCE) %>% 
   mutate(prop = n / sum(n))
