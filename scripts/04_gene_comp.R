@@ -3,7 +3,10 @@ library(ggplot2)
 library(arrow)
 
 counts_vst <- read_parquet("data/counts_vst_un.parquet")
-counts_df <- readRDS("data/counts_df_gte.RDS")
+counts_control <- read_parquet("./data/counts_control_tcga.parquet")
+counts_disease <- read_parquet("./data/counts_disease_tcga.parquet")
+counts_df <- readRDS("data/counts_df_gte.RDS") %>% 
+  tibble::rownames_to_column("Description")
 metadata_breast_woman <- readRDS("data/metadata_tcga.RDS")
 genes_tcga <- readRDS("data/genes_tcga.RDS")
 
@@ -18,24 +21,21 @@ genes_tcga <- genes_tcga %>%
 genes_tcga$gene_id <- gsub("\\..*", "" , genes_tcga$gene_id)
 
 
-
 # GTE gene names
 
-gene_names_gte <- counts_df$Description # It mixes hugo symbols fore some genes and ENSEMBL for other
+gene_names_gte <- counts_df$Symbol 
+
 
 # Thus the indexing includes searching for the symbol and ensembl counterparts
 
-length(genes_tcga$gene_name[((genes_tcga$gene_name %in% gene_names_gte) | (genes_tcga$gene_id %in% gene_names_gte))]) # Number of genes in TCGA that can also be found on gte
+length(genes_tcga$gene_name[genes_tcga$gene_name %in% gene_names_gte]) # Number of genes in TCGA that can also be found on gte
 
-length(genes_tcga$gene_name[!((genes_tcga$gene_name %in% gene_names_gte) | (genes_tcga$gene_id %in% gene_names_gte))]) # Number of genes in TCGA that can are missing on gte
+
+length(genes_tcga$gene_name[!(genes_tcga$gene_name %in% gene_names_gte)]) # Number of genes in TCGA that can are missing on gte
 
 # Keep the names of the missing genes
 
-remaining_names <- genes_tcga$gene_name[!((genes_tcga$gene_name %in% gene_names_gte) | (genes_tcga$gene_id %in% gene_names_gte))]
-
-# Keep ids of missing genes
-
-remaining_id <- genes_tcga$gene_id[!((genes_tcga$gene_name %in% gene_names_gte) | (genes_tcga$gene_id %in% gene_names_gte))]
+remaining_names <- genes_tcga$gene_name[!(genes_tcga$gene_name %in% gene_names_gte)]
 
 # Keep counts in tcga of genes missing in gte
 
@@ -59,7 +59,6 @@ ggplot(counts_remain, aes(x = var + 1)) +
 # Summary of variance
 
 summary(counts_remain$var)
-
 
 
 counts_remain <- counts_remain %>% 
@@ -217,10 +216,8 @@ for (i in genes_to_analyze) {
   print(rownames(transposed_unique_cont)[transposed_unique_cont[[i]] == max(transposed_unique_cont[[i]])])
   print(rownames(transposed_unique_cont)[transposed_unique_cont[[i]] == top_cont_counts[2]])
   
-  
-  
 }
 
 
-
-
+rm(list = ls())
+gc()

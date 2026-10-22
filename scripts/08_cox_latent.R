@@ -55,13 +55,9 @@ surv_obj_test <- Surv(test_surv$RECURRENCE_MON, test_surv$RECURRENCE)
 test_surv_for_cox <- test_surv %>% 
   dplyr::select(-c(RECURRENCE_MON, RECURRENCE))
 
-cox_test <- coxph(surv_obj_test~., test_surv_for_cox)
-summary(cox_test)
-cox.zph(cox_test)
 
+  test_surv$risk <- predict(cox_model, newdata = test_surv, type = "risk")
 
+c_results <- concordance(surv_obj_test ~ risk, data = test_surv, reverse = FALSE)
 
-test_surv$risk <- predict(cox_model, newdata = test_surv, type = "risk")
-
-c_results <- concordance(surv_obj_test ~ risk, data = test_surv, reverse = TRUE)
-
+c_results

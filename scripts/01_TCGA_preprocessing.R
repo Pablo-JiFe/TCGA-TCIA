@@ -29,6 +29,8 @@ tcga_brca_data <- GDCprepare(tcga_rna, directory = directory,
 
 counts_raw <- assay(tcga_brca_data, "unstranded")
 
+counts_fpkm <- assay(tcga_brca_data, "fpkm_unstrand")
+
 genes_tcga <- rowData(tcga_brca_data) %>% 
   as.data.frame() %>% 
   dplyr::select(c("gene_id", "gene_name", "gene_type"))
@@ -42,8 +44,35 @@ rm("tcga_brca_data")
 
 counts_raw <- 
   counts_raw %>% 
-  as.data.frame()
+  as.data.frame() %>% 
+  tibble::rownames_to_column("gene_id") %>% 
+  left_join(genes_tcga, by = "gene_id") %>% 
+  dplyr::select(-c(gene_id, gene_type))
 
+counts_raw$var <- apply(as.matrix(counts_raw[, !colnames(counts_raw) %in% "gene_name"]), 1, var)
+
+counts_raw <- 
+  counts_raw %>% 
+  group_by(gene_name) %>% 
+  slice_max(order_by = var, n = 1, with_ties = FALSE) %>% 
+  select(-var) %>% 
+  ungroup()
+
+counts_fpkm <- 
+  counts_fpkm %>% 
+  as.data.frame() %>% 
+  tibble::rownames_to_column("gene_id") %>% 
+  left_join(genes_tcga, by = "gene_id") %>% 
+  dplyr::select(-c(gene_id, gene_type))
+
+counts_fpkm$var <- apply(as.matrix(counts_fpkm[, !colnames(counts_fpkm) %in% "gene_name"]), 1, var)
+
+counts_fpkm <- 
+  counts_fpkm %>% 
+  group_by(gene_name) %>% 
+  slice_max(order_by = var, n = 1, with_ties = FALSE) %>% 
+  select(-var) %>% 
+  ungroup()
 
 
 # 1.- Metadata ------------------------------------------------------------
@@ -87,9 +116,10 @@ refined_data <-
 
 
 
-saveRDS(counts_raw, "data/counts_raw_tcga.RDS")
+saveRDS(counts_raw, "./data/counts_raw_tcga.RDS")
 saveRDS(refined_data, "./data/metadata_tcga.RDS")
 saveRDS(genes_tcga, "./data/genes_tcga.RDS")
+saveRDS(counts_fpkm, "./data/counts_fpkm.RDS")
 
 rm(list = ls())
 gc()

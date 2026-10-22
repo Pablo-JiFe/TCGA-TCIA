@@ -3,7 +3,8 @@ library(ggplot2)
 library(bench)
 library(arrow)
 
-counts_raw <- readRDS("data/counts_raw_tcga.RDS")
+counts_raw <- readRDS("data/counts_raw_tcga.RDS") %>% 
+  tibble::column_to_rownames("gene_name")
 refined_data <- readRDS("./data/metadata_tcga.RDS")
 genes_tcga <- readRDS("./data/genes_tcga.RDS")
 
@@ -23,36 +24,7 @@ plate_center <- data.frame(
 
 # VST transform -----------------------------------------------------------
 
-
-res <- bench::mark(
-  n_100_5k  = DESeq2::vst(counts_raw[1:5000, 1:100]),
-  n_500_5k  = DESeq2::vst(counts_raw[1:5000, 1:200]),
-  n_100_5k  = DESeq2::vst(counts_raw[1:5000, 1:500]),
-  n_500_5k  = DESeq2::vst(counts_raw[1:5000, 1:1000]),
-  n_100_10k  = DESeq2::vst(counts_raw[1:10000, 1:100]),
-  n_500_10k  = DESeq2::vst(counts_raw[1:10000, 1:200]),
-  n_100_10k  = DESeq2::vst(counts_raw[1:10000, 1:500]),
-  n_500_10k  = DESeq2::vst(counts_raw[1:10000, 1:1000]),
-  n_100_30k  = DESeq2::vst(counts_raw[1:30000, 1:100]),
-  n_500_30k  = DESeq2::vst(counts_raw[1:30000, 1:200]),
-  n_100_30k  = DESeq2::vst(counts_raw[1:30000, 1:500]),
-  n_500_30k  = DESeq2::vst(counts_raw[1:30000, 1:1000]),
-  n_100_60k  = DESeq2::vst(counts_raw[1:60000, 1:100]),
-  n_500_60k  = DESeq2::vst(counts_raw[1:60000, 1:200]),
-  n_100_60k  = DESeq2::vst(counts_raw[1:60000, 1:500]),
-  n_500_60k  = DESeq2::vst(counts_raw[1:60000, 1:1000]),
-  iterations = 1,
-  check = FALSE
-)
-
-
-cbind(data.frame(expresion = names(res$expression)), res[,2:9]) %>% 
-  flextable::flextable() %>% 
-  flextable::autofit()
-
-counts_vst <- DESeq2::vst(object = counts_raw)
-
-
+counts_vst <- DESeq2::vst(object = as.matrix(counts_raw))
 
 # PCA before correction ---------------------------------------------------
 
@@ -62,56 +34,24 @@ pca$x %>%
   ggplot(aes(x = PC1, y = PC2, colour = plate_center$plate, shape = plate_center$center)) + 
   geom_point()
 
-
 # Batch correction --------------------------------------------------------
 
 limma::removeBatchEffect()
 
-
-
 # Scale ---------------------------------------------------------------
 
-
-res_scale <- bench::mark(
-  n_100_5k  = scale(counts_vst[1:5000, 1:100]),
-  n_500_5k  = scale(counts_vst[1:5000, 1:200]),
-  n_100_5k  = scale(counts_vst[1:5000, 1:500]),
-  n_500_5k  = scale(counts_vst[1:5000, 1:1000]),
-  n_100_10k  = scale(counts_vst[1:10000, 1:100]),
-  n_500_10k  = scale(counts_vst[1:10000, 1:200]),
-  n_100_10k  = scale(counts_vst[1:10000, 1:500]),
-  n_500_10k  = scale(counts_vst[1:10000, 1:1000]),
-  n_100_30k  = scale(counts_vst[1:30000, 1:100]),
-  n_500_30k  = scale(counts_vst[1:30000, 1:200]),
-  n_100_30k  = scale(counts_vst[1:30000, 1:500]),
-  n_500_30k  = scale(counts_vst[1:30000, 1:1000]),
-  n_100_60k  = scale(counts_vst[1:60000, 1:100]),
-  n_500_60k  = scale(counts_vst[1:60000, 1:200]),
-  n_100_60k  = scale(counts_vst[1:60000, 1:500]),
-  n_500_60k  = scale(counts_vst[1:60000, 1:1000]),
-  iterations = 1,
-  check = FALSE
-)
-
-
-res_scale
-
 vst_scaled <- scale(counts_vst)
-
-
 
 # Name genes and delete duplicate -----------------------------------------
 
 counts_vst_var <- counts_vst %>% 
-  as.data.frame() %>% 
-  tibble::rownames_to_column("gene_id") %>% 
-  left_join(genes_tcga, by = "gene_id") %>% 
-  dplyr::select(-c(gene_id, gene_type))
+  as.data.frame() 
 
 counts_vst_var$var <- apply(as.matrix(counts_vst_var[, !colnames(counts_vst_var) %in% "gene_name"]), 1, var)
 
 counts_vst_un <- 
   counts_vst_var %>% 
+  tibble::rownames_to_column("gene_name") %>% 
   group_by(gene_name) %>% 
   slice_max(order_by = var, n = 1, with_ties = FALSE) %>% 
   select(-var) %>% 
@@ -119,6 +59,7 @@ counts_vst_un <-
 
 
 genes_tok <- counts_vst_var %>% 
+  tibble::rownames_to_column("gene_name") %>% 
   select(gene_name, var) %>% 
   group_by(gene_name) %>% 
   slice_max(order_by = var, n = 1, with_ties = FALSE) %>% 
@@ -169,4 +110,5 @@ write_parquet(counts_disease_final, "data/counts_disease_tcga.parquet")
 write_parquet(counts_mets, "data/counts_mets_tcga.parquet")
 write_parquet(counts_vst_un, "./data/counts_vst_un.parquet")
 
-
+rm(list = ls())
+gc()
