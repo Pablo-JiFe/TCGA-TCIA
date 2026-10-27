@@ -3,6 +3,8 @@ library(tidyr)
 library(tibble)
 library(survival)
 library(glmnet)
+library(tidymodels)
+library(censored)
 
 train_latent <- read.csv("output_data/latent_train_vae.csv", row.names = 1)
 
@@ -67,10 +69,6 @@ test_surv$surv_obj <- Surv(test_surv$RECURRENCE_MON, test_surv$RECURRENCE)
 
 
 # Penalized ---------------------------------------------------------------
-
-library(tidymodels)
-library(censored)
-
 
 
 lr_rec <-
@@ -148,6 +146,30 @@ cat(coef_tbl$term, sep = ", ")
 
 st_pred <- predict(final_fit, new_data = test_surv, type = "linear_pred")
 
-c_results <- concordance(surv_obj ~ st_pred$.pred_linear_pred, data = test_surv, reverse = TRUE)
+c_results <- concordance(surv_obj ~ st_pred$.pred_linear_pred, data = test_surv, reverse = FALSE)
 
 c_results
+
+# 5.- Proportional Hazards Diagnostics ------------------------------------
+
+# 5.1 Extract the preprocessed training data from recipe
+
+prepped_recipe <- extract_recipe(final_fit)
+processed_train <- bake(prepped_recipe, new_data = train_surv)
+
+# 5.2 names of the features 
+active_genes <- coef_tbl %>% 
+  filter(term != "penalty") %>% # Exclude penalty metadata if present
+  pull(term)
+
+# 5.3 formula matching predictors
+diag_formula <- as.formula(
+  paste("surv_obj ~", paste(active_genes, collapse = " + "))
+)
+
+# 5.4 Fit an unpenalized Cox model on the selected variables
+diag_model <- coxph(diag_formula, data = processed_train)
+
+# 5.5 Run the proportional hazards test and plot
+ph_test <- cox.zph(diag_model)
+print(ph_test)

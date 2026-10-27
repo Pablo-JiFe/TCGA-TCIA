@@ -206,7 +206,7 @@ table$analysis <-
   c(
   rep(c("VST_TCGA"), each = 16),
 rep(c("VST_GTEx"), each = 8),
-rep(c("Scale VST", "Log2 transform FPKM", "Batch TCGA-GTEx VST"), each = 16)
+rep(c("Scale VST", "Log2 transform FPKM", "Batch TCGA-GTEx crudos"), each = 16)
 )
 
 table <- table %>% 
@@ -214,23 +214,70 @@ table <- table %>%
   dplyr::select(-c(n_itr, n_gc))
 
 
+
+table <- 
+  table %>% 
+  mutate(
+    n_samples = gsub("^n_(.*)_(.*)k$", "\\1", expresion),
+    n_genes = (as.numeric(gsub("^n_(.*)_(.*)k$", "\\2", expresion)) * 1000),
+    Input = case_when(
+      analysis == "VST_TCGA" ~ "Conteos crudos",
+      analysis == "VST_GTEx" ~ "Conteos crudos",
+      analysis == "Scale VST" ~ "Conteos transformados con VST",
+      analysis == "Log2 transform FPKM" ~ "Conteos FPKM",
+      analysis == "Batch TCGA-GTEx crudos" ~ "Conteos crudos, metadata con cohorte de pertenencia",
+    ),
+    Output = case_when(
+      analysis == "VST_TCGA" ~ "Conteos transformados con VST",
+      analysis == "VST_GTEx" ~ "Conteos transformados con VST",
+      analysis == "Scale VST" ~ "Conteos transformados con VST escalado y centrado",
+      analysis == "Log2 transform FPKM" ~ "Conteos FPKM log 2",
+      analysis == "Batch TCGA-GTEx crudos" ~ "Conteos crudos con corrección de lote",
+    )
+  ) %>% 
+  dplyr::relocate(c(analysis, Input, Output, n_samples, n_genes)) %>% 
+  select(-expresion, -min, -median) %>% 
+  rename(
+    "Analisis" = "analysis",
+    "Número de muestras" = "n_samples",
+    "Número de genes" = "n_genes",
+    "Tiempo total" = "total_time",
+    "Iteraciones segundo"  = "itr.sec",
+    "Memoria RAM" = "mem_alloc",
+    "Tiempo de garbage collection" = "gc.sec")
+
+
 table %>% 
   flextable::flextable() %>%
   flextable::autofit() %>% 
-  flextable::hline(i = 16) %>% 
-  flextable::hline(i = 24) %>% 
-  flextable::hline(i = 40) %>% 
-  flextable::hline(i = 56) %>% 
-  flextable::hline(i = 72) %>% 
+  theme_zebra() %>% 
   flextable::merge_at(i=c(1:16), j = 1) %>% 
   flextable::merge_at(i=c(17:24), j = 1) %>% 
   flextable::merge_at(i=c(25:40), j = 1) %>% 
   flextable::merge_at(i=c(41:56), j = 1) %>% 
   flextable::merge_at(i=c(57:72), j = 1) %>% 
+  flextable::merge_at(i=c(1:16), j = 2) %>% 
+  flextable::merge_at(i=c(17:24), j = 2) %>% 
+  flextable::merge_at(i=c(25:40), j = 2) %>% 
+  flextable::merge_at(i=c(41:56), j = 2) %>% 
+  flextable::merge_at(i=c(57:72), j = 2) %>% 
+  flextable::merge_at(i=c(1:16), j = 3) %>% 
+  flextable::merge_at(i=c(17:24), j = 3) %>% 
+  flextable::merge_at(i=c(25:40), j = 3) %>% 
+  flextable::merge_at(i=c(41:56), j = 3) %>% 
+  flextable::merge_at(i=c(57:72), j = 3) %>% 
+  flextable::hline(j = c(4:9)) %>% 
+  flextable::hline(i = 16, j = c(1:9) ,border = officer::fp_border(width = 2)) %>% 
+  flextable::hline(i = 24, j = c(1:9) ,border = officer::fp_border(width = 2)) %>% 
+  flextable::hline(i = 40, j = c(1:9) ,border = officer::fp_border(width = 2)) %>% 
+  flextable::hline(i = 56, j = c(1:9) ,border = officer::fp_border(width = 2)) %>% 
+  flextable::hline(i = 72, j = c(1:9) ,border = officer::fp_border(width = 2)) %>% 
+  
   flextable::padding(padding.top = 1.5, padding.bottom = 1.5, part = "all")
+
 
 write.csv(table, "./results/time_table.csv")
 
 
 
-table2 <- read.csv("results/time_table.csv", row.names = 1)
+table <- read.csv("results/time_table.csv", row.names = 1)

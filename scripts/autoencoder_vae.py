@@ -6,6 +6,7 @@ from torch.utils.data import TensorDataset, DataLoader
 from torch_snippets import *
 import random
 
+
 random.seed(37)
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -37,31 +38,33 @@ train_loader = DataLoader(train_ds, batch_size=64, shuffle=True)
 test_loader = DataLoader(test_ds, batch_size=64, shuffle=False)
 
 class VAE(nn.Module):
-    def __init__(self, input_dim = 5000, latent_dim = 20, hidden_deep = 750, hidden_sup = 3000):
+    def __init__(self, input_dim = 5000, latent_dim = 15, hidden_deep = 500, hidden_sup = 2500):
         super().__init__()
 
         # Encoder
+        self.encoder = nn.Sequential(
 
-        self.fc0 = nn.Linear(input_dim, hidden_sup) 
-        self.fc1 = nn.Linear(hidden_sup, hidden_deep)
+        nn.Linear(input_dim, hidden_sup) ,
+        nn.LayerNorm(hidden_sup),
+        nn.GELU(),
+        nn.Linear(hidden_sup, hidden_deep),
+        nn.LayerNorm(hidden_deep),
+        nn.GELU(),
+
+        )
         self.fc_mu = nn.Linear(hidden_deep, latent_dim)
         self.fc_logvar = nn.Linear(hidden_deep, latent_dim)
-
         #Decoder
 
-        self.fc2 = nn.Linear(latent_dim, hidden_deep)
-        self.fc3 = nn.Linear(hidden_deep, hidden_sup)
-        self.fc4 = nn.Linear(hidden_sup, input_dim)
-
-        self.gelu = nn.GELU()
-        self.tanh = nn.Tanh()
-
-    def encode(self, x):
-        h0 = self.gelu(self.fc0(x)) 
-        h = self.tanh(self.fc1(h0))
-        mu = self.fc_mu(h)
-        logvar = self.fc_logvar(h)
-        return mu, logvar
+        self.decoder = nn.Sequential(
+        nn.Linear(latent_dim, hidden_deep),
+        nn.LayerNorm(hidden_deep),
+        nn.GELU(),
+        nn.Linear(hidden_deep, hidden_sup),
+        nn.LayerNorm(hidden_sup),
+        nn.GELU(),
+        nn.Linear(hidden_sup, input_dim)
+        )
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
@@ -69,17 +72,14 @@ class VAE(nn.Module):
         z = mu + eps*std
         return z
 
-    def decoder(self, z):
-        h1 = self.tanh(self.fc2(z))
-        h2 = self.gelu(self.fc3(h1))
-        out = self.fc4(h2)
-        return out
-
     def forward(self, x):
-        mu, logvar = self.encode(x)
+        encoded = self.encoder(x)
+        mu = self.fc_mu(encoded)
+        logvar = self.fc_logvar(encoded)
         z = self.reparameterize(mu, logvar)
         x_reconstructed = self.decoder(z)
         return x_reconstructed, mu, logvar, z
+
 
 def vae_loss(recon_x, x, mu, logvar, beta=1.0):
     recon_loss = nn.functional.smooth_l1_loss(
@@ -97,7 +97,7 @@ model = VAE().to(device)
 
 optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-3)
 
-epochs = 10
+epochs = 20
 
 def train_batch(batch, model, optimizer):
     model.train()

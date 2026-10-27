@@ -10,7 +10,7 @@ random.seed(37)
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-counts = pd.read_parquet("../data/counts_disease5k_tcga.parquet")
+counts = pd.read_parquet("./data/counts_disease5k_tcga.parquet")
 counts.rename(counts["gene_name"], inplace=True)
 counts = counts.drop(columns=["gene_name"])
 counts = counts.T
